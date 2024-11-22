@@ -51,5 +51,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "bakircay-2024.sln"
+    "dotnet.defaultSolution": "bakircay-2024-gd-210601052.sln"
 }
