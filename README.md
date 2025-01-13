@@ -8,11 +8,6 @@ A simple matching game built in Unity where players need to match identical obje
 - Realtime collision detection and response
 - Smooth object placement system
 
-
-## Future Improvements
-- Add scoring system
-- Add sound effects
-
 ## Gameplay
-https://github.com/user-attachments/assets/a875e42a-87dd-446e-8ba2-4e35b3bbf60d
+[https://github.com/user-attachments/assets/a875e42a-87dd-446e-8ba2-4e35b3bbf60d](https://play.unity.com/en/games/eec7e231-4caf-49b6-8d4e-2b6fe8dbde08/deneme)
 
