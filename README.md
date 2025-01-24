@@ -9,5 +9,5 @@ A simple matching game built in Unity where players need to match identical obje
 - Smooth object placement system
 
 ## Gameplay
-[Playable game link](https://play.unity.com/en/games/eec7e231-4caf-49b6-8d4e-2b6fe8dbde08/deneme)
+[Playable game link](https://play.unity.com/en/games/eec7e231-4caf-49b6-8d4e-2b6fe8dbde08/mustafa-ata-yikilmaz)
 

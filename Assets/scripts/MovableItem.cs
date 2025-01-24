@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
@@ -7,16 +8,25 @@ public class MovableItem : MonoBehaviour
     public string FruitName;
     public float backduration = 3f;
     public PlacementPlatform _sp;
-    public float height = 1.5f; // Daha düşük yay çizmesi için azaltıldı
+    public float height = 1.5f;
     public Animator myAnimator;
+    private Material fruitMaterial;
+    private Color originalColor;
+
+    [Header("Match Animation Settings")]
+    public float fadeOutDuration = 0.5f;
+    public float destroyDelay = 1.2f;
+    public float rotationSpeed = 360f;
+    public float bounceHeight = 0.5f;
+    public Color flashColor = Color.white;
+    public float flashDuration = 0.1f;
 
     [Header("Drag & Throw Settings")]
-    public float maxDragHeight = 0.3f;    // Nesnenin sürüklenirken maksimum yükseldiği değer
-    public float flingMaxSpeed = 0.5f;      // Bıraktıktan sonraki maksimum hız
-    public float backForceMultiplier = 0.3f; // Geri fırlatma gücü çarpanı (mismatch durumunda)
+    public float maxDragHeight = 0.3f;
+    public float flingMaxSpeed = 0.5f;
+    public float backForceMultiplier = 0.3f;
 
     [Header("Game Area Bounds")]
-    // Nesnelerin hareket edebileceği minimum ve maksimum koordinatları
     public Vector3 minBoundary = new Vector3(-8.26f, -3.80f, -7.20f);
     public Vector3 maxBoundary = new Vector3(6.56f, -3.00f, 3.40f);
 
@@ -31,9 +41,6 @@ public class MovableItem : MonoBehaviour
     private Vector3 screenPoint;
     private Vector3 offset;
     private float initialY;
-
-    // Kinematik aktifken velocity set etmeyeceğiz,
-    // bu yüzden saklayıp sonra tekrar atayacağız.
     private Vector3 velocityBeforeKinematic = Vector3.zero;
 
     private void Start()
@@ -41,44 +48,24 @@ public class MovableItem : MonoBehaviour
         mainCamera = Camera.main;
         rb = GetComponent<Rigidbody>();
 
-        fallposition = transform.position;
-        initialY = transform.position.y;
-        startposition = transform.position; // Geri dönmek istediğinde, orijinal pozisyon
-    }
-
-    private void Update()
-    {
-        if (isBack)
+        // Get the renderer's material
+        Renderer renderer = GetComponent<Renderer>();
+        if (renderer != null)
         {
-            // “isBack” durumunda nesneyi bir yay eğrisi ile geri taşıyoruz:
-            if (elapsedTime < backduration)
+            fruitMaterial = renderer.material;
+            if (fruitMaterial.HasProperty("_Color"))
             {
-                elapsedTime += Time.deltaTime;
-                float t = elapsedTime / backduration;
-
-                // Sadece x-z ekseninde lineer interpolasyon
-                Vector3 horizontalPosition = Vector3.Lerp(transform.position, startposition, t);
-
-                // Y ekseninde küçük bir yay oluştur
-                float arc = Mathf.Sin(t * Mathf.PI) * height;
-
-                transform.position = new Vector3(
-                    horizontalPosition.x,
-                    horizontalPosition.y + arc,
-                    horizontalPosition.z
-                );
+                originalColor = fruitMaterial.color;
             }
             else
             {
-                // Yay hareketi bittiğinde tekrar fizik kontrolü ver
-                rb.isKinematic = false;
-                // Saklanan velocity'yi geri ver (çarpan uygulanmış hâlini)
-                rb.linearVelocity = velocityBeforeKinematic;
-
-                isBack = false;
-                elapsedTime = 0;
+                originalColor = Color.white;
             }
         }
+
+        fallposition = transform.position;
+        initialY = transform.position.y;
+        startposition = transform.position;
     }
 
     private void OnMouseDown()
@@ -103,15 +90,11 @@ public class MovableItem : MonoBehaviour
             Vector3 currentScreenPoint = new Vector3(Input.mousePosition.x, Input.mousePosition.y, screenPoint.z);
             Vector3 currentPosition = mainCamera.ScreenToWorldPoint(currentScreenPoint) + offset;
 
-            // Nesnenin fazla yukarı çıkmasını engelle
             currentPosition.y = Mathf.Clamp(currentPosition.y, initialY, initialY + maxDragHeight);
-
-            // Oyun alanı sınırları içinde kalmasını sağla
             currentPosition.x = Mathf.Clamp(currentPosition.x, minBoundary.x, maxBoundary.x);
             currentPosition.y = Mathf.Clamp(currentPosition.y, minBoundary.y, maxBoundary.y);
             currentPosition.z = Mathf.Clamp(currentPosition.z, minBoundary.z, maxBoundary.z);
 
-            // Kinematik bir rigidbody'yi MovePosition ile taşıyabiliriz
             rb.MovePosition(currentPosition);
         }
     }
@@ -119,10 +102,8 @@ public class MovableItem : MonoBehaviour
     private void OnMouseUp()
     {
         isDragging = false;
-        // Kinematikten çıkmadan önce velocity uygulayacaksak burada yapabiliriz
         rb.isKinematic = false;
 
-        // Fiziksel hızını kontrol et
         Vector3 newVelocity = rb.linearVelocity;
         if (newVelocity.magnitude > flingMaxSpeed)
         {
@@ -143,39 +124,13 @@ public class MovableItem : MonoBehaviour
             }
             else if (_sp.CurrentFruit != this && _sp.CurrentFruit.FruitName == this.FruitName)
             {
-                // Eşleşme durumu
-                if (myAnimator != null)
-                    myAnimator.SetTrigger("OnMatch");
-
-                if (_sp.CurrentFruit.myAnimator != null)
-                    _sp.CurrentFruit.myAnimator.SetTrigger("OnMatch");
-
-                rb.isKinematic = false;
-                gameObject.layer = 6;
-
-                _sp.CurrentFruit.rb.isKinematic = false;
-                _sp.CurrentFruit.gameObject.layer = 6;
-
-                _sp.CurrentFruit = null;
-
-                _sp.Score += 1;
-                _sp.ScoreText.text = $"Score: {_sp.Score}";
-
-                // İsteğe bağlı: Eşleşme particles
-                if (_sp.matchParticleEffect)
-                {
-                    Instantiate(_sp.matchParticleEffect, transform.position, Quaternion.identity);
-                }
+                StartCoroutine(HandleMatch());
             }
             else if (_sp.CurrentFruit != this && _sp.CurrentFruit.FruitName != this.FruitName)
             {
-                // Eşleşme yoksa, geri gitmeli (isBack = true)
                 isBack = true;
-                // Kinematik yapmadan önce velocity’yi sakla ve azalt
                 velocityBeforeKinematic = rb.linearVelocity * backForceMultiplier;
-
                 rb.isKinematic = true;
-                // Diğer bir skill/paticle burada da kullanılabilir.
             }
         }
 
@@ -191,6 +146,146 @@ public class MovableItem : MonoBehaviour
         if (other.transform.name == "WrongFallArea")
         {
             transform.position = fallposition;
+        }
+    }
+
+    private IEnumerator HandleMatch()
+    {
+        // Store reference to other fruit before nulling it
+        MovableItem otherFruit = _sp.CurrentFruit;
+        
+        // Make fruits kinematic for controlled animation
+        rb.isKinematic = true;
+        otherFruit.rb.isKinematic = true;
+        
+        // Update game state
+        gameObject.layer = 6;
+        otherFruit.gameObject.layer = 6;
+        _sp.CurrentFruit = null;
+        _sp.AddScore(10);
+
+        // Start the animation coroutine for both fruits
+        StartCoroutine(PlayMatchAnimation(transform));
+        StartCoroutine(PlayMatchAnimation(otherFruit.transform));
+
+        // Enhanced particle effects at both positions
+        if (_sp.matchParticleEffect)
+        {
+            SpawnParticleEffects(transform.position);
+            SpawnParticleEffects(otherFruit.transform.position);
+        }
+
+        // Wait for animation to complete before destroying
+        yield return new WaitForSeconds(destroyDelay);
+
+        // Check for game completion
+        if (_sp.Fruits.childCount <= 2)
+        {
+            _sp.ComplatePanel.SetActive(true);
+        }
+        
+        // Destroy both fruits
+        Destroy(otherFruit.gameObject);
+        Destroy(gameObject);
+    }
+
+    private void SpawnParticleEffects(Vector3 position)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            float angle = i * (360f / 4);
+            Vector3 offset = Quaternion.Euler(0, angle, 0) * Vector3.forward * 0.5f;
+            Instantiate(_sp.matchParticleEffect, position + offset, Quaternion.Euler(0, angle, 0));
+        }
+    }
+
+    public IEnumerator PlayMatchAnimation(Transform fruitTransform)
+    {
+        Vector3 startPos = fruitTransform.position;
+        Vector3 startScale = fruitTransform.localScale;
+        Renderer fruitRenderer = fruitTransform.GetComponent<Renderer>();
+        Material fruitMat = fruitRenderer ? fruitRenderer.material : null;
+        Color originalFruitColor = fruitMat ? fruitMat.color : Color.white;
+
+        // Initial flash
+        if (fruitMat != null)
+        {
+            fruitMat.color = flashColor;
+            yield return new WaitForSeconds(flashDuration);
+            fruitMat.color = originalFruitColor;
+        }
+
+        // Trigger base animation
+        Animator fruitAnimator = fruitTransform.GetComponent<Animator>();
+        if (fruitAnimator != null)
+            fruitAnimator.SetTrigger("OnMatch");
+
+        // Main animation loop
+        float elapsedTime = 0;
+        while (elapsedTime < fadeOutDuration)
+        {
+            elapsedTime += Time.deltaTime;
+            float t = elapsedTime / fadeOutDuration;
+            
+            // Smooth step for better easing
+            float smoothT = t * t * (3f - 2f * t);
+            
+            // Scale with bounce
+            float scale = 1 + Mathf.Sin(t * Mathf.PI * 2) * 0.5f;
+            fruitTransform.localScale = startScale * scale;
+            
+            // Rotation
+            fruitTransform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime);
+            
+            // Bounce movement
+            float bounce = Mathf.Sin(t * Mathf.PI * 2) * bounceHeight;
+            fruitTransform.position = startPos + Vector3.up * bounce;
+            
+            // Fade out
+            if (fruitMat != null)
+            {
+                Color endColor = new Color(originalFruitColor.r, originalFruitColor.g, originalFruitColor.b, 0);
+                fruitMat.color = Color.Lerp(originalFruitColor, endColor, smoothT);
+            }
+
+            yield return null;
+        }
+
+        // Final flash
+        if (fruitMat != null)
+        {
+            fruitMat.color = flashColor;
+            yield return new WaitForSeconds(0.1f);
+            fruitMat.color = new Color(originalFruitColor.r, originalFruitColor.g, originalFruitColor.b, 0);
+        }
+    }
+
+    private void Update()
+    {
+        if (isBack)
+        {
+            if (elapsedTime < backduration)
+            {
+                elapsedTime += Time.deltaTime;
+                float t = elapsedTime / backduration;
+
+                Vector3 horizontalPosition = Vector3.Lerp(transform.position, startposition, t);
+                float arc = Mathf.Sin(t * Mathf.PI) * height;
+
+                transform.position = new Vector3(
+                    horizontalPosition.x,
+                    horizontalPosition.y + arc,
+                    horizontalPosition.z
+                );
+            }
+            else
+            {
+                rb.isKinematic = false;
+                rb.linearVelocity = velocityBeforeKinematic;
+
+                isBack = false;
+                elapsedTime = 0;
+            }
         }
     }
 

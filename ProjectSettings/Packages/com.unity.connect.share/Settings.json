@@ -4,7 +4,7 @@
             {
                 "type": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
                 "key": "buildOutputDirList",
-                "value": "{\"m_Value\":\"/Users/pheal/Desktop/bakircay-2024-gd-210601052/deneme;/Users/pheal/Desktop/bakircay-2024-gd-210601052/WebGL Builds;C:/Users/ERALP/Desktop/BuildWeb;C:/Users/ERALP/Desktop/webuild;C:/Users/ERALP/Desktop/sonbuild;C:/Users/ERALP/Desktop/buildweb;C:/Users/ERALP/Desktop/webbuild;C:/Users/ERALP/Desktop/WebGLBuild;C:/Users/ERALP/Desktop/webglbuild;\"}"
+                "value": "{\"m_Value\":\"/Users/pheal/Projects/bakircay-2024-gd-210601052/WebGL Builds;/Users/pheal/Desktop/bakircay-2024-gd-210601052/deneme;/Users/pheal/Desktop/bakircay-2024-gd-210601052/WebGL Builds;C:/Users/ERALP/Desktop/BuildWeb;C:/Users/ERALP/Desktop/webuild;C:/Users/ERALP/Desktop/sonbuild;C:/Users/ERALP/Desktop/buildweb;C:/Users/ERALP/Desktop/webbuild;C:/Users/ERALP/Desktop/WebGLBuild;C:/Users/ERALP/Desktop/webglbuild\"}"
             },
             {
                 "type": "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
